@@ -1,0 +1,68 @@
+module uart_t#(
+    parameter clk_freq = 10000,
+    parameter baud_rate = 9600
+) (
+    input clk,
+    input rst,
+    input newd,
+    input [7:0] tx_data,
+    output reg tx,
+    output reg donetx
+);
+    reg [1:0] state;
+    parameter idle = 2'b00, start = 2'b01, send = 2'b10, comp = 2'b11;
+
+    reg uclk = 0;
+    integer countc = 0;
+    integer count = 0;
+    localparam clk_count = (clk_freq / baud_rate);
+
+    // Generate uclk
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            countc <= 0;
+            uclk <= 0;
+        end else if (countc < clk_count - 1) begin
+            countc <= countc + 1;
+        end else begin
+            uclk <= ~uclk;
+            countc <= 0;
+        end
+    end
+
+    reg [7:0] temp;
+
+    always @(posedge uclk or posedge rst) begin
+        if (rst) begin
+            state <= idle;
+            tx <= 1'b1;
+            donetx <= 1'b0;
+        end else begin
+            case (state)
+                idle: begin
+                    count <= 0;
+                    donetx <= 1'b0;
+                    if (newd) begin
+                        tx <= 1'b0; // Start bit
+                        temp <= tx_data;
+                        state <= send;
+                    end
+                end
+                send: begin
+                    if (count < 8) begin
+                        tx <= temp[count];
+                        count <= count + 1;
+                    end else begin
+                        tx <= 1'b1; // Stop bit
+                        state <= comp;
+                    end
+                end
+                comp: begin
+                    donetx <= 1'b1;
+                    state <= idle;
+                end
+                default: state <= idle;
+            endcase
+        end
+    end
+endmodule
