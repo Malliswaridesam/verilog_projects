@@ -1,0 +1,63 @@
+module apb_uart_integration(
+    input clk, rst,
+    input psel, penable, pwrite,
+    input [31:0] paddr, pdata,
+    input [3:0] pstrb,
+    input pready_w, pready_r,
+    input puarterr, rx_ready_apb,
+    input rx, // UART RX input
+    output tx, // UART TX output
+    output pready, pslverr,
+    output [7:0] data_out_uart,
+    output new_instruction_tx, new_instruction_rx,
+    output start_uart, write_uart, read_uart
+);
+    // Wires for UART signals
+    wire donetx, donerx;
+    wire [7:0] rxdata;
+
+    // Instantiate the APB decoder
+    apb_decoder apb_dec_inst (
+        .clk(clk),
+        .rst(rst),
+        .psel(psel),
+        .penable(penable),
+        .pwrite(pwrite),
+        .paddr(paddr),
+        .pdata(pdata),
+        .pstrb(pstrb),
+        .pready_w(pready_w),
+        .pready_r(pready_r),
+        .puarterr(puarterr),
+        .rx_ready_apb(rx_ready_apb),
+        .pready(pready),
+        .pslverr(pslverr),
+        .data_out_uart(data_out_uart),
+        .new_instruction_tx(new_instruction_tx),
+        .new_instruction_rx(new_instruction_rx),
+        .start_uart(start_uart),
+        .write_uart(write_uart),
+        .read_uart(read_uart)
+    );
+
+    // Instantiate the UART top module
+    uart_top #(
+        .clk_freq(100000),
+        .baud_rate(9600)
+    ) uart_top_inst (
+        .clk(clk),
+        .rst(rst),
+        .newd(write_uart),
+        .rx(rx),
+        .tx_data(data_out_uart),
+        .tx(tx),
+        .donetx(donetx),
+        .donerx(donerx),
+        .rxdata(rxdata)
+    );
+
+    // RX_READY flag logic for APB Decoder
+    assign rx_ready_apb = donerx;
+endmodule
+
+
