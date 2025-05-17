@@ -1,0 +1,124 @@
+module cu(
+    input rst,
+    input [6:0] opcode,
+    input [6:0] funct7,
+    input [2:0] funct3,
+    output reg [5:0] alu_ctrl,
+    output reg lb_ctrl,
+//    output reg mem_reg,
+    output reg sw_ctrl,
+    output reg lui_ctrl,
+    output reg jump_ctrl,
+    output reg jump_r_ctrl,
+    output reg beq_ctrl,
+    output reg bneq_ctrl,
+    output reg blt_ctrl,
+    output reg bgt_ctrl
+);
+
+always @(*) begin
+    if (rst) begin
+        alu_ctrl <= 6'b000000;
+//        mem_reg <= 0;
+        beq_ctrl <= 0;
+        bneq_ctrl <= 0;
+        blt_ctrl <= 0;
+        bgt_ctrl <= 0;
+        lb_ctrl <= 0;
+        sw_ctrl <= 0;
+        jump_ctrl <= 0;
+        lui_ctrl <= 0;
+    end else begin
+        case (opcode)
+            // R-type Instructions
+            7'b0110011: begin
+                case (funct3)
+                    3'b000: alu_ctrl <= (funct7 == 7'b0000000) ? 6'b000001 : 
+                                         (funct7 == 7'b0100000) ? 6'b000010 : alu_ctrl;
+                    3'b001: alu_ctrl <= 6'b000011; // Shift left logical
+                    3'b010: alu_ctrl <= 6'b000100; // Set less than signed
+                    3'b011: alu_ctrl <= 6'b000101; // Unsigned set less than
+                    3'b100: alu_ctrl <= 6'b000110; // XOR
+                    3'b101: alu_ctrl <= (funct7 == 7'b0000000) ? 6'b000111 : 
+                                         (funct7 == 7'b0100000) ? 6'b001000 : alu_ctrl; // Shift right logical/arithmetic
+                    3'b110: alu_ctrl <= 6'b001001; // OR
+                    3'b111: alu_ctrl <= 6'b001010; // AND
+                endcase
+            end
+
+            // I-type Instructions
+            7'b0010011: begin
+                case (funct3)
+                    3'b000: alu_ctrl <= 6'b001011; // ADDI
+                    3'b001: alu_ctrl <= 6'b001100; // Shift left logical
+                    3'b010: alu_ctrl <= 6'b001101; // Set less than
+                    3'b011: alu_ctrl <= 6'b001110; // Set less than unsigned
+                    3'b100: alu_ctrl <= 6'b001111; // XORI
+                    3'b101: alu_ctrl <= (funct7 == 7'b0000000) ? 6'b010000 : 
+                                         (funct7 == 7'b0100000) ? 6'b010001 : alu_ctrl; // Shift right logical/arithmetic
+                    3'b110: alu_ctrl <= 6'b010010; // ORI
+                    3'b111: alu_ctrl <= 6'b010011; // ANDI
+                endcase
+            end
+
+            // Branch Instructions
+            7'b1100011: begin
+                case (funct3)
+                    3'b000: begin
+                        alu_ctrl <= 6'b010100; // BEQ
+                        beq_ctrl <= 1;
+                    end
+                    3'b001: begin
+                        alu_ctrl <= 6'b010101; // BNE
+                        bneq_ctrl <= 1;
+                    end
+                    3'b100: begin
+                        alu_ctrl <= 6'b010110; // BLT
+                        blt_ctrl <= 1;
+                    end
+                    3'b101: begin
+                        alu_ctrl <= 6'b010111; // BGT
+                        bgt_ctrl <= 1;
+                    end
+                endcase
+            end
+
+            // Load Instructions
+            7'b0000011: begin
+                lb_ctrl <= 1;
+            end
+
+            // Store Instructions
+            7'b0100011: begin
+                sw_ctrl <= 1;
+            end
+
+            // LUI Instruction
+            7'b0110111: begin
+                lui_ctrl <= 1;
+            end
+
+            // JAL Instruction
+            7'b1101111: begin
+                alu_ctrl <= 6'b011101;
+                jump_ctrl <= 1;
+            end
+
+            // Default case to clear all control signals if opcode is not recognized
+            default: begin
+                alu_ctrl <= 6'b000000;
+//                mem_reg <= 0;
+                beq_ctrl <= 0;
+                bneq_ctrl <= 0;
+                blt_ctrl <= 0;
+                bgt_ctrl <= 0;
+                lb_ctrl <= 0;
+                sw_ctrl <= 0;
+                jump_ctrl <= 0;
+                lui_ctrl <= 0;
+            end
+        endcase
+    end
+end
+
+endmodule
