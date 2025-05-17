@@ -1,0 +1,26 @@
+`timescale 1ns / 1ps
+
+                             
+module dm(
+input clk,rst,
+input [4:0]load_store_address,
+output [31:0]read_data,
+input [31:0]write_data,
+input sw
+);
+reg [31:0]reg_mem[31:0];
+integer i;
+always @(posedge clk)
+begin
+        if(rst)
+        begin
+            for(i=0;i<32;i=i+1)
+            reg_mem[i]=i;
+        end 
+        else if(sw)
+        begin
+            reg_mem[load_store_address]=write_data;
+        end
+end
+assign read_data=reg_mem[load_store_address];
+endmodule
