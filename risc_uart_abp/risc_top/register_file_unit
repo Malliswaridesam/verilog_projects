@@ -1,0 +1,42 @@
+module rfu(
+    input clk,
+    input rst,
+    input [4:0] read_addr1, read_addr2, write_addr, // to perform r & i type instructions
+    input [31:0] write_data_dm, // data from data memory to load into register
+    input lb, lui_ctrl, jump, sw, // control signals
+    input [31:0] current_pc,
+    input [31:0] imm_val_lui, // current_pc for jump instruction
+    output [31:0] read_num1, read_num2, // data to perform r & i
+    output reg [31:0] read_data_dm // data to store in data memory
+);
+
+    // Register array to hold the registers
+    reg [31:0] mem_reg[31:0];
+    integer i;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            // Reset all registers to their index value
+            for (i = 0; i < 32; i = i + 1) begin
+                mem_reg[i] <= i;  // Initialize registers to their index values (could be any reset logic)
+            end
+            read_data_dm <= 32'b0; // Reset read_data_dm
+        end else begin
+            // Update the registers based on control signals
+            if (lb) begin
+                mem_reg[write_addr] <= write_data_dm; // Load data from data memory into register
+            end else if (sw) begin
+                read_data_dm <= mem_reg[read_addr2]; // Read data from register and assign to output
+            end else if (lui_ctrl) begin
+                mem_reg[write_addr] <= imm_val_lui; // Load upper immediate into register
+            end else if (jump) begin
+                mem_reg[write_addr] <= current_pc; // Store current PC into register
+            end
+        end
+    end
+
+    // Assign read register values to the output ports
+    assign read_num1 = mem_reg[read_addr1]; // Read data for address 1
+    assign read_num2 = mem_reg[read_addr2]; // Read data for address 2
+
+endmodule
