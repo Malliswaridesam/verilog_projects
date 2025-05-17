@@ -1,0 +1,65 @@
+module apb_decoder(
+
+input clk,rst,
+input psel,penable,pwrite,
+input [31:0]paddr,pdata,
+input [3:0]pstrb,
+input pready_w,pready_r,
+input puarterr,
+input rx_ready_apb,
+output pready,pslverr,
+output reg [7:0]data_out_uart,
+output  new_instruction_tx,
+output  new_instruction_rx,
+output reg start_uart,
+output reg write_uart,
+output reg read_uart
+);
+
+always @(posedge clk)
+begin
+                    if(rst || pready_w)
+                        begin
+                        write_uart=0;
+                        read_uart=0;
+                        start_uart=1;
+                        end
+                    
+                    else if(psel && penable)
+                        begin
+                                if(pwrite)
+                                begin
+                                write_uart=pwrite;
+                                data_out_uart = pdata[7:0];
+                                end
+                        
+                        else
+                        begin
+                                if(rx_ready_apb)
+                                    begin
+                                    start_uart=1;
+                                    read_uart=1;
+                                    end
+                                else if(!pready_r)
+                                    start_uart=0;
+                                else
+                                    begin
+                                    start_uart=1;
+                                    read_uart=0;
+                                    end
+                        end 
+                     end
+                   
+end
+
+assign pready=pready_r || pready_w;
+assign new_instruction_tx=pready_r;
+assign new_instruction_rx=pready_r;
+assign pslverr=puarterr;
+
+endmodule
+
+
+
+
+
