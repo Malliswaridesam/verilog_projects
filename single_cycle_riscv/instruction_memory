@@ -1,0 +1,174 @@
+module im(
+input clk,rst,
+input [31:0]pc,
+output [31:0]ins_out);
+
+reg [7:0]mem[60:0];
+
+assign ins_out={mem[pc+3],mem[pc+2],mem[pc+1],mem[pc]};
+always @(posedge clk)
+begin
+if (rst==1'b1)
+begin
+mem[3]=8'h00;
+mem[2]=8'h94;
+mem[1]=8'h03;
+mem[0]=8'h33;
+//sub instruction 0x800100b3
+mem[7]=8'h80;
+mem[6]=8'h01;
+mem[5]=8'h00;
+mem[4]=8'hb3;
+//sll 0x00209133
+mem[11]=8'h00;
+mem[10]=8'h20;
+mem[9]=8'h91;
+mem[8]=8'h33;
+//slt 0x01d125b2
+mem[15]=8'h01;
+mem[14]=8'hd1;
+mem[13]=8'h25;
+mem[12]=8'hb2;
+
+//sltu 0x01d13d33
+mem[19]=8'h01;
+mem[18]=8'hd1;
+mem[17]=8'h3d;
+mem[16]=8'h33;
+
+//srl 0x00c55ab3
+mem[23]=8'h00;
+mem[22]=8'hc5;
+mem[21]=8'h5a;
+mem[20]=8'hb3;
+
+//sra 0x40555fb3
+mem[27]=8'h40;
+mem[26]=8'h55;
+mem[25]=8'h5f;
+mem[24]=8'hb3;
+
+//xor 0x00c54ab3
+mem[31]=8'h00;
+mem[30]=8'hc5;
+mem[29]=8'h4a;
+mem[28]=8'hb3;
+
+//or 0x00d67fb3
+mem[35]=8'h00;
+mem[34]=8'hd6;
+mem[33]=8'h7f;
+mem[32]=8'hb3;
+
+//and 0x00f768b3
+mem[39]=8'h00;
+mem[38]=8'hf7;
+mem[37]=8'h68;
+mem[36]=8'hb3;
+
+// Immediate instructions 
+// addi
+ mem[43]=8'h00;
+mem[42]=8'ha0;
+mem[41]=8'h85;
+mem[40]=8'h13;
+//xori 
+mem[47]=8'h00;
+mem[46]=8'h41;
+mem[45]=8'h93;
+mem[44]=8'h13;
+
+//ori 
+mem[51]=8'h00;
+mem[50]=8'hf1;
+mem[49]=8'h70;
+mem[48]=8'h93;
+//andi
+mem[55]=8'h00;
+mem[54]=8'hf1;
+mem[53]=8'h70;
+mem[52]=8'h93;
+//sli
+mem[59]=8'h00;
+mem[58]=8'h41;
+mem[57]=8'h93;
+mem[56]=8'h13;
+//sri
+mem[63]=8'h00;
+mem[62]=8'h31;
+mem[61]=8'h50;
+mem[60]=8'h93;
+//srai
+mem[67]=8'h41;
+mem[66]=8'hf3;
+mem[65]=8'hdd;
+mem[64]=8'ha3;
+//slti
+mem[71]=8'hfe;
+mem[70]=8'h0f;
+mem[69]=8'h28;
+mem[68]=8'ha3;
+//sltiu
+mem[75]=8'hfe;
+mem[74]=8'h0f;
+mem[73]=8'h3b;
+mem[72]=8'h13;
+// Load instruction in Immediate 
+//0x00430283
+mem[79]=8'h00;
+mem[78]=8'h43;
+mem[77]=8'h02;
+mem[76]=8'h83;
+//Store Instruction in Immediate 
+mem[83]=8'h00;
+mem[82]=8'h73;
+mem[81]=8'h28;
+mem[80]=8'h23;
+
+//Branch type instructions
+//beq 0xadb20de3
+mem[87]=8'had;
+mem[86]=8'hb2;
+mem[85]=8'h0d;
+mem[84]=8'he3;
+
+//bneq 0xadb21de3
+mem[91]=8'had;
+mem[90]=8'hb2;
+mem[89]=8'h1d;
+mem[88]=8'he3;
+//blt 0xadb24de3
+mem[95]=8'had;
+mem[94]=8'hb2;
+mem[93]=8'h4d;
+mem[92]=8'he3;
+//bgt 0xadb25de3
+mem[99]=8'had;
+mem[98]=8'hb2;
+mem[97]=8'h5d;
+mem[96]=8'he3;
+
+//bltu 0xadb26de3
+mem[103]=8'had;
+mem[102]=8'hb2;
+mem[101]=8'h6d;
+mem[100]=8'he3;
+//bget 0xadb27de3
+mem[107]=8'had;
+mem[106]=8'hb2;
+mem[105]=8'h7d;
+mem[104]=8'he3;
+
+//jump instruction
+mem[111]=8'hed;
+mem[110]=8'h66;
+mem[109]=8'hcf;
+mem[108]=8'hef;
+//jalr
+mem[115]=8'hed;
+mem[114]=8'h6d;
+mem[113]=8'h82;
+mem[112]=8'h67;
+end
+end
+endmodule
