@@ -1,0 +1,168 @@
+module dual_port_rom_ecc #(parameter ADDR_WIDTH = 4, DATA_WIDTH = 8, ECC_WIDTH = 4) ( 
+    input wire clk, ren1, ren2,
+    input wire [ADDR_WIDTH-1:0] addr1, addr2,
+    output reg [DATA_WIDTH-1:0] data1, data2
+);
+    localparam TOTAL_WIDTH = DATA_WIDTH + ECC_WIDTH;
+    reg [TOTAL_WIDTH-1:0] rom [0:(1<<ADDR_WIDTH)-1];
+    reg [DATA_WIDTH-1:0] data_array [0:15];
+    integer i;
+
+    //  Hamming ECC (Hamming 12,8)
+    function [11:0] encode_data(input [7:0] data);
+        reg [11:0] codeword;
+        reg p1, p2, p4, p8;
+        begin
+            // Place data bits in positions: 3,5,6,7,9,10,11,12
+            codeword[2]  = data[0]; // d0
+            codeword[4]  = data[1]; // d1
+            codeword[5]  = data[2]; // d2
+            codeword[6]  = data[3]; // d3
+            codeword[8]  = data[4]; // d4
+            codeword[9]  = data[5]; // d5
+            codeword[10] = data[6]; // d6
+            codeword[11] = data[7]; // d7
+    
+            // Compute parity bits (positions 1,2,4,8)
+            p1 = codeword[2] ^ codeword[4] ^ codeword[6] ^ codeword[8] ^ codeword[10];
+            p2 = codeword[2] ^ codeword[5] ^ codeword[6] ^ codeword[9] ^ codeword[10];
+            p4 = codeword[4] ^ codeword[5] ^ codeword[6] ^ codeword[11];
+            p8 = codeword[8] ^ codeword[9] ^ codeword[10] ^ codeword[11];
+    
+            codeword[0] = p1;
+            codeword[1] = p2;
+            codeword[3] = p4;
+            codeword[7] = p8;
+    
+            encode_data = codeword;
+        end
+    endfunction
+
+
+
+    // Function to decode and correct a 12-bit codeword
+    function [7:0] decode_and_correct(input [11:0] codeword);
+        reg [11:0] corrected;
+        reg [3:0] syndrome;
+        integer error_pos;
+        begin
+            corrected = codeword;
+    
+            // Recompute parity from received codeword
+            syndrome[0] = codeword[0] ^ codeword[2] ^ codeword[4] ^ codeword[6] ^ codeword[8] ^ codeword[10]; // p1
+            syndrome[1] = codeword[1] ^ codeword[2] ^ codeword[5] ^ codeword[6] ^ codeword[9] ^ codeword[10]; // p2
+            syndrome[2] = codeword[3] ^ codeword[4] ^ codeword[5] ^ codeword[6] ^ codeword[11];               // p4
+            syndrome[3] = codeword[7] ^ codeword[8] ^ codeword[9] ^ codeword[10] ^ codeword[11];              // p8
+    
+            error_pos = syndrome;
+    
+            if (error_pos != 0 && error_pos <= 12) begin
+                corrected[error_pos - 1] = ~corrected[error_pos - 1];
+            end
+    
+            // Extract corrected data bits
+            decode_and_correct = {
+                corrected[11], // d7
+                corrected[10], // d6
+                corrected[9],  // d5
+                corrected[8],  // d4
+                corrected[6],  // d3
+                corrected[5],  // d2
+                corrected[4],  // d1
+                corrected[2]   // d0
+            };
+        end
+    endfunction
+
+
+
+    // ROM initialization with ECC encoding
+    initial begin
+        data_array[0]  = 8'hA1; data_array[1]  = 8'hB2; data_array[2]  = 8'hC3; data_array[3]  = 8'hD4;
+        data_array[4]  = 8'hE5; data_array[5]  = 8'hF6; data_array[6]  = 8'h07; data_array[7]  = 8'h18;
+        data_array[8]  = 8'h29; data_array[9]  = 8'h3A; data_array[10] = 8'h4B; data_array[11] = 8'h5C;
+        data_array[12] = 8'h6D; data_array[13] = 8'h7E; data_array[14] = 8'h8F; data_array[15] = 8'h90;
+
+        for (i = 0; i < 16; i = i + 1) begin
+            rom[i] = encode_data(data_array[i]);
+        end
+    end
+
+    // Synchronous read and error correction
+    always @(posedge clk) begin
+        if(ren1)
+            data1 <= decode_and_correct(rom[addr1]);
+        if(ren2)
+            data2 <= decode_and_correct(rom[addr2]);
+    end
+
+endmodule
+
+module dual_port_rom_ecc_tb;
+    parameter ADDR_WIDTH = 4;
+    parameter DATA_WIDTH = 8;
+    parameter ECC_WIDTH = 4;
+    parameter TOTAL_WIDTH = DATA_WIDTH + ECC_WIDTH;
+
+    reg clk;
+    reg [ADDR_WIDTH-1:0] addr1;
+    reg [ADDR_WIDTH-1:0] addr2;
+    reg ren1;
+    reg ren2;
+
+    wire [DATA_WIDTH-1:0] data1;
+    wire [DATA_WIDTH-1:0] data2;
+    
+    integer i;
+    
+    dual_port_rom_ecc #(ADDR_WIDTH, DATA_WIDTH, ECC_WIDTH) uut (
+        .clk(clk),
+        .ren1(ren1),
+        .ren2(ren2),
+        .addr1(addr1),
+        .addr2(addr2),
+        .data1(data1),
+        .data2(data2)
+    );
+
+    // Clock generation
+    always #5 clk = ~clk;
+
+    initial begin
+        clk = 0;
+        addr1 = 0;
+        addr2 = 0;
+        ren1 = 0;
+        ren2 = 0;
+
+        #10;
+        
+        ren1 = 1;
+        ren2 = 1;
+
+        $display("Time\tAddr1\tData1\tAddr2\tData2");
+
+        // Read all address combinations
+        for (i = 0; i < 16; i = i + 2) begin
+            addr1 = i;
+            addr2 = i + 1;
+            #10;
+            $display("%0t\t%0d\t%h\t%0d\t%h", $time, addr1, data1, addr2, data2);
+        end
+        
+        ren1 = 0;
+        ren2 = 0;
+
+        // Inject a single-bit error
+        $display("\n----- Injecting Single-Bit Error -----");
+        uut.rom[3][0] = ~uut.rom[3][0]; // Flip LSB of data
+
+        addr1 = 3;
+        ren1 = 1;
+        #10;
+        $display("Time=%0t Addr1=%0d Data1(corrected)=%h", $time, addr1, data1);
+
+        $finish;
+    end
+
+endmodule
