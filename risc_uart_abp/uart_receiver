@@ -1,0 +1,66 @@
+module uart_r #(parameter clk_freq=100000,parameter baud_rate=9600)(input clk,rst,rx,output reg donerx,output reg [7:0]rxdata);
+
+reg [1:0] state;
+parameter idle=2'b00,send=2'b01;
+
+reg uclk=0;
+integer count=0;
+integer countc=0;
+localparam clk_count=(clk_freq/baud_rate);
+ always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            countc <= 0;
+            uclk <= 0;
+        end else if (countc < clk_count - 1) begin
+            countc <= countc + 1;
+        end else begin
+            uclk <= ~uclk;
+            countc <= 0;
+        end
+    end
+
+always @(posedge uclk)
+begin
+if(rst==1'b1)
+begin
+ rxdata<=8'h00;	
+count<=0;
+donerx<=1'b0;
+end
+else
+begin
+case(state)
+idle : 
+begin
+rxdata<=8'h0;
+donerx<=1'b0;
+count<=0;
+if(rx==1'b0)
+state<=send;
+else
+state<=idle;
+end
+
+send :
+begin
+if(count<=7)
+begin
+rxdata <= {rx, rxdata[7:1]};
+count<=count+1;
+
+end
+else
+begin
+
+donerx<=1'b1;
+count<=0;
+state<=idle;
+end
+end
+default :
+state<=idle;
+endcase
+ 
+end
+end
+endmodule
