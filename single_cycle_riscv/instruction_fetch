@@ -1,0 +1,32 @@
+module ifu(
+input clk,rst,
+input [31:0]imm_addr,
+input [31:0]imm_addr_jmp,
+input beq,bneq,bge,ble,
+input jump,
+output reg [31:0]pc,
+output reg [31:0]current_pc
+);
+
+always @(posedge clk)
+begin
+if (rst)
+ pc<=32'b0;
+ else if(jump)
+ pc<=pc+imm_addr_jmp;
+ else if(beq || bneq || bge || ble)
+ pc<=pc+imm_addr;
+ else
+ pc<=pc+4;
+end
+
+always @(posedge clk)
+begin
+if (rst)
+current_pc<=32'b0;
+else if(jump)
+current_pc<=pc;
+end
+endmodule
+
+
