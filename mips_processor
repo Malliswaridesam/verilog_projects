@@ -1,0 +1,92 @@
+module mips_processor(
+input clk,rst
+);
+wire [31:0]ins_code;
+wire stall_signal;
+
+ins_mem i1(clk,rst,stall_signal,ins_code);
+wire [31:0]ins_out;
+if_id i2(clk,ins_code,ins_out);
+wire [4:0]dst;
+wire regwrite;
+wire [31:0]writereg_mem_wb;
+wire [31:0]read_reg1,read_reg2;
+reg_file r1(rst,ins_out[25:21],ins_out[20:16],dst,writereg_mem_wb,regwrite,read_reg1,read_reg2);
+
+wire [31:0]read_reg1o,read_reg2o;
+wire [31:0]sign_extendo;
+wire regwrite_cu,regwrite_idex_o;
+wire  regdst_cu1,regdst_idex_o;
+wire alusrc_cu1,alusrc_idex_o;
+wire aluop_cu1,aluop_idex_o;
+wire memwrite_cu1, memwrite_idex_o;
+wire memread_cu1,memread_idex_o;
+wire memtoreg_cu1,memtoreg_idex_o;
+wire [4:0]rs_idex_o,rt_idex_o,rd_idex_o,funct_idex_o;
+wire [4:0]writereg_exmem;
+
+id_ex idex(clk,read_reg1,read_reg2,read_reg1o,read_reg2o,{16'b0,ins_out[15:0]},sign_extendo,regwrite_cu,regwrite_idex_o,
+ regdst_cu1,regdst_idex_o,alusrc_cu1,alusrc_idex_o,aluop_cu1,aluop_idex_o, memwrite_cu1, memwrite_idex_o,memread_cu1,memread_idex_o,
+ memtoreg_cu1,memtoreg_idex_o,ins_out[25:21],rs_idex_o,ins_out[20:16],rt_idex_o,ins_out[15:11],rd_idex_o,ins_out[5:0],funct_idex_o);
+ 
+ 
+ mux_s32 muxs32(rt_idex_o,rd_idex_o,regdst_idex_o,writereg_exmem);
+ 
+ wire [31:0]aluresult_exmem_o;
+ wire [31:0]write_data;
+ wire [1:0]ctrl_rs,ctrl_rt;
+ wire [31:0]forward_rs,forward_rt;
+ wire [31:0]b;
+ wire [31:0]alu_result;
+ wire memwrite_exmem_o,memread_exmem_o,memtoreg_exmem_o,regwrite_exmem_o;
+ wire [31:0]read_reg2_exmem_o;
+ wire [4:0]rd_exmem_o;
+ wire [31:0]read_data_mem_wb,read_data_mem_wb_o,aluresult_mem_wb_o;
+ wire memtoreg_mem_wb_o;
+ wire [4:0] writereg_mem_wb;
+ 
+ mux4_s mux4s(read_reg1o,alu_result_exmem_o,write_data,ctrl_rs,forward_rs);
+ mux4_s mux5s(read_reg2o,alu_result_exmem_o,write_data,ctrl_rt,forward_rt);
+ mux_s32 muxs321(forward_rt,sign_extendo,alusrc_idex_o,b);
+ alu alu_unit(forward_rs,b,aluop_idex_o,funct_idex_o,alu_result);
+ ex_mem exmem(clk,memwrite_idex_o,memwrite_exmem_o,memread_idex_o,memread_exmem_o,memtoreg_idex_o,memtoreg_idex_o,
+                regwrite_idex_o,regwrite_exmem_o,writereg_exmem,alu_result,aluresult_exmem_o,read_reg2o,read_reg2_exmem_o,rd_exmem_o);
+                
+data_memory d1(rst,aluresult_exmem_o,read_reg2_exmem_o,memread_exmem_o,memwrite_exmem_o,read_data_mem_wb);
+mem_wb memwb(clk,memtoreg_exmem_o,memtoreg_mem_wb_o,regwrite_exmem_o,regwrite,rd_exmem_o,read_data_mem_wb,read_data_mem_wb_o,
+                aluresult_exmem_o,aluresult_mem_wb_o,writereg_mem_wb);
+                
+wire regdst_cu,alusrc_cu,aluop_cu,memread_cu,memwrite_cu,memtoreg_cu;
+           
+mux_s32 muxs322(aluresult_mem_wb_o,read_data_mem_wb_o,memtoreg_mem_wb_o,write_data);
+control_unit c1(ins_out[31:26],regdst_cu,regwrite_cu,alusrc_cu,aluop_cu,memread_cu,memwrite_cu,memtoreg_cu);
+forward_unit f1(rs_idex_o,rt_idex_o,rd_exmem_o,writereg_mem_wb,regwrite_exmem_o,regwrite,ctrl_rs,ctrl_rt);
+stall_unit s1(rst,memread_idex_o,rt_idex_o,ins_out[25:21],ins_out[20:16],stall_signal);
+mux_s1 muxs1(1'b0,alusrc_cu,stall_signal,alusrc_cu1);
+mux_s1 muxs2(1'b0,regdst_cu,stall_signal,regdst_cu1);
+
+mux_s1 mux_s3(1'b0,memwrite_cu,stall_signal,memwrite_cu1);
+mux_s1 mux_s4(1'b0,memread_cu,stall_signal,memread_cu1);
+mux_s1 mux_s5(1'b1,memtoreg_cu,stall_signal,memtoreg_cu1);
+mux_s1 mux_s6(1'b0,regwrite_cu,stall_signal,regwrite_cu1);
+mux_s2 mux_s7(2'b0,aluop_cu,stall_signal,aluop_cu1);
+
+endmodule
+
+
+module mips_processor_tb;
+reg clk,rst;
+mips_processor uut(clk,rst);
+initial begin
+clk = 1'b0;
+end
+always #10 clk=~clk;
+
+initial begin
+rst = 1'b1;
+#100 rst =1'b0;
+
+end
+
+
+endmodule
