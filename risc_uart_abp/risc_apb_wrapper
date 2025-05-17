@@ -1,0 +1,82 @@
+module apb_riscv_wrapper(
+    input clk, rst,
+    input [31:0] ins_out,
+    input [31:0] rs1, rs2,
+    input ready, slverr,
+    output reg [31:0] saddr,
+    output reg [31:0] swdata,
+    output reg swrite,
+    output reg transfer,
+    output reg [3:0] sstrb,
+    output stop
+   
+);
+
+localparam idle = 0,
+           wait_r = 1,
+           ready_wait = 2;
+
+reg [1:0] cs, ns;
+
+// State transition
+always @(posedge clk or posedge rst) begin
+    if (rst)
+        cs <= idle;
+    else
+        cs <= ns;
+end
+
+// Next state logic
+always @(*) begin
+    case (cs)
+        idle: begin 
+            if (ins_out[6:0] == 7'b0100011) // SW instruction
+                ns = wait_r;
+            else
+                ns = idle;
+        end
+
+        wait_r: begin
+            if (ready)
+                ns = ready_wait;
+            else
+                ns = wait_r;
+        end
+        ready_wait: begin
+            if (ready)
+                ns = ready_wait;
+            else
+                ns = idle;
+        end
+        default: ns = idle;
+    endcase
+end
+
+// Output logic
+always @(*) begin
+        if(cs == idle)
+        begin
+        transfer = 0;
+        swrite = 0;
+        saddr = 0;
+        swdata = 0;
+        sstrb = 4'b1111;
+        end
+        else if(cs == wait_r)
+        begin
+        transfer =1;
+        swrite=1;
+        saddr = {ins_out[31:25],ins_out[11:7]} + rs1;
+         swdata = rs2;
+        end
+        else if(cs == ready_wait)
+        begin
+        transfer =0;
+        swrite =0;
+        saddr =0;
+        end
+        
+end
+assign stop = (ns !=idle)?1:0;
+
+endmodule
