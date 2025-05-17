@@ -1,0 +1,101 @@
+module apb_master(
+input pclk,preset,
+input pready,pslverr,
+input swrite,
+input [31:0]sdata,saddr,
+input [3:0]sstrb,
+input transfer,
+output ready,slverr,
+output reg [31:0]paddr,pdata,
+output reg [3:0]pstrb,
+output reg psel,penable,pwrite
+);
+
+reg [1:0]cs,ns;
+
+localparam idle = 2'b00,
+            setup = 2'b01,
+            access = 2'b10;
+            
+always @(posedge pclk)
+begin
+    if(preset)
+        cs = idle;
+    else
+        cs = ns;
+end
+
+always @(*)
+begin
+    case(cs)
+    idle: 
+        begin
+        if(transfer)
+        ns=setup;
+        else
+        ns=idle;
+        end
+    setup :
+        ns=access;
+    access :
+    begin
+        if(pready && !transfer)
+            ns = idle;
+        else if(pready && transfer)
+            ns = setup;
+        else 
+            ns = access;
+    end
+    default:
+        ns = idle;
+        endcase
+end
+
+always @(*)
+begin
+
+if(preset)
+begin
+        paddr=0;
+        pdata=0;
+        pwrite=0;
+        pstrb=0;
+        psel=0;
+        penable=0;
+end
+else 
+begin
+
+case(cs)
+        idle:
+        begin
+                psel=0;
+                penable =0;
+        end
+        setup:
+        begin
+                psel=1;
+                penable=0;
+                pwrite=swrite;
+                paddr=saddr;
+                pdata=sdata;
+                pstrb=sstrb;
+        end
+        
+        access :
+        begin
+                psel=1;
+                penable=1;
+        end
+        
+        
+endcase
+
+
+end
+end
+
+assign ready = pready;
+assign slverr = pslverr;
+
+endmodule
