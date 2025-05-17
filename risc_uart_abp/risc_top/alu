@@ -1,0 +1,64 @@
+module alu(
+input [31:0]src1,src2,
+input [5:0]alu_ctrl,
+input [31:0]imm_val,
+input [4:0]shamt,
+output reg [31:0]result
+);
+always @(*)
+begin
+    case(alu_ctrl)
+    //R - Type Instructions 
+    6'b000001:
+            result=src1+src2; //add
+    6'b000010:
+            result=src1-src2;//sub
+    6'b000011:
+            result= src1 << src2; //sll
+    6'b000100:
+            result= (src1 < src2)? 1:0; //slt
+    6'b000101:
+            result=(src1 < src2)? 1:0; //sltu
+    6'b000110:
+            result=src1 ^ src2; //xor
+    6'b000111:
+            result=src1 >> src2; //srl
+    6'b001000:
+            result=src1 >>> src2; //sra
+    6'b001001:
+            result=src1 | src2; //or
+    6'b001010:
+            result=src1 & src2;  //and
+    // I - type Instructions
+    6'b001011:
+            result= src1 + imm_val; //add
+    6'b001100:
+            result=src1 << shamt; //sll
+    6'b001101:
+            result= (src1 < imm_val)?1:0; //slt
+    6'b001110:
+            result= (src1 < imm_val)?1:0; //sltu
+    6'b001111:
+            result= src1 ^ imm_val; //xor
+    6'b010000:
+            result = src1 >> shamt;//srl
+    6'b010001:
+            result= src1 >>> shamt; //sra
+    6'b010010:
+            result = src1 | imm_val; //or
+    6'b010011:
+            result = src1 & imm_val; //and
+    //Branch Instructions
+    6'b010100:
+            result = (src1 == src2)?1:0; //equal to
+    6'b010101:
+            result = (src1 !=src2)?1:0;  // not equal to
+    6'b010110:
+            result = (src1 < src2)?1:0; //less than 
+    6'b010111:
+            result = (src1 > src2)?1:0; //greater than
+            
+            
+   endcase
+end
+endmodule
