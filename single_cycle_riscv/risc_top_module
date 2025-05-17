@@ -1,0 +1,114 @@
+module top(
+input clk,rst
+    );
+    
+wire [31:0]pc;
+wire [31:0]current_pc;
+wire [31:0]imm_addr_branch_i;
+wire [31:0]imm_addr_jump;
+wire beq,bneq,bgt,blt,jump;
+wire [31:0]ins_out;
+wire [5:0]alu_ctrl;
+wire lb_ctrl,mem_reg;
+wire sw_ctrl,lui_ctrl;
+wire jump_ctrl,jump_r_ctrl;
+wire  beq_ctrl,bneq_ctrl,blt_ctrl,bgt_ctrl;
+wire [31:0]imm_val_lui;
+wire [31:0]imm_val;
+wire [31:0]read_num1;
+wire [31:0]read_num2;
+wire [31:0]store_data_dm;
+wire [31:0]alu_result;
+wire [31:0]load_data_dm;
+
+//wire [4:0]read_addr_dm;
+wire [31:0]load_store_address_temp;
+wire [4:0]base_address;
+wire [31:0]load_store_address;
+
+
+
+assign imm_val={{20{ins_out[31]}},ins_out[31:21]};
+assign imm_addr_branch_i={{20{ins_out[31]}},ins_out[30:25],ins_out[11:8],ins_out[7]};
+assign imm_val_lui={{10{ins_out[31]}},ins_out[31:12]};
+assign imm_addr_jump ={{10{ins_out[31]}},ins_out[31:12]};
+
+assign load_store_address_temp={{20{ins_out[31]}},ins_out[31:20]};
+assign base_address = ins_out[19:15];
+assign load_store_address = load_store_address_temp + base_address;
+
+//assign load_stor_address_i = {{20{ins_out[31]}},ins_out[31:20]};
+//assign base_address= ins_out[19:15];
+//assign load_store_address=load_store_address_i + base_address; 
+
+assign beq = (alu_result && beq_ctrl)?1:0;
+assign bneq = (alu_result && bneq_ctrl)?1:0;
+assign bgt = (alu_result && bgt_ctrl)?1:0;
+assign blt = (alu_result && blt_ctrl)?1:0;
+
+
+
+
+ifu i1(clk,
+        rst,
+        imm_addr_branch_i,
+        imm_addr_jump,
+        beq,
+        bneq,
+        bgt,
+        blt,
+        jump,
+        pc,
+        current_pc);
+    
+im i2(clk,
+        rst,
+        pc,
+        ins_out);
+     
+cu c1(rst,
+        ins_out[6:0],
+        ins_out[31:25],
+        ins_out[14:12],
+        alu_ctrl,
+        lb_ctrl,
+        mem_reg,
+        sw_ctrl,
+        lui_ctrl,
+        jump_ctrl,
+        jump_r_ctrl
+        ,beq_ctrl,
+        bneq_ctrl,
+        blt_ctrl,
+        bgt_ctrl);
+        
+rfu r1(clk,
+        rst,
+        ins_out[19:15],
+        ins_out[24:20],
+        ins_out[11:7],
+        load_data_dm,
+        lb_ctrl,
+        lui_ctrl,jump_ctrl,
+        sw_ctrl,
+        current_pc,
+        imm_val_lui,
+        read_num1,
+        read_num2,
+        store_data_dm
+        );
+     
+     
+alu a1(read_num1,
+        read_num2,
+        alu_ctrl,
+        imm_val,
+        ins_out[23:20],
+        alu_result);
+        
+dm d1(clk,
+        rst,
+        load_store_address,
+        load_data_dm,
+        store_data_dm);
+     endmodule
